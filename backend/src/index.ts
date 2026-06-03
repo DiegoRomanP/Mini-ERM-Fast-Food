@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db';
 import inventoryRoutes from './routes/inventoryRoutes';
+//resolver problemas de importación
+
 
 // Cargar variables de entorno
 dotenv.config();

@@ -1,6 +1,9 @@
 import { Router } from "express";
 import {
-  createItem /*, getItems, updateItem, deleteItem */,
+  createItem,
+  getItems,
+  updateItem,
+  deleteItem,
 } from "../controllers/inventoryController";
 
 const router = Router();
