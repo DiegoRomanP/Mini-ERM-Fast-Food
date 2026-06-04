@@ -1,5 +1,5 @@
 import axios from "axios";
-import { IInventoryItem } from "../types";
+import type { IInventoryItem } from "../types";
 
 // En desarrollo apuntará a tu backend local.
 // En la Fase 7 (Despliegue), cambiaremos esto por la URL de Render.
