@@ -1,0 +1,34 @@
+# Dependencies (reinstaladas dentro del build)
+node_modules
+
+# Build output (regenerado por `npm run build`)
+dist
+coverage
+
+# VCS
+.git
+.gitignore
+
+# Entorno / secretos (nunca deben viajar al build context ni a la imagen)
+.env
+.env.*.local
+.env.local
+
+# Tests (no se ejecutan dentro de la imagen)
+tests
+*.test.ts
+*.spec.ts
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker (evita ciclos innecesarios en el build context)
+Dockerfile
+.dockerignore

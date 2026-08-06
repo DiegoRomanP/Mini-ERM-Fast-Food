@@ -1,0 +1,60 @@
+# Compose de desarrollo/demo para la API (mini-erp).
+#
+# Decisión: los valores de entorno (usuario/clave de Postgres, secretos JWT/cookie)
+# se hardcodean directamente en este archivo en vez de usar un `.env` separado.
+# Son valores de desarrollo consistentes con `api/.env.example` (no secretos reales,
+# no se usan en producción), así que mantenerlos aquí hace que `docker compose up`
+# funcione out-of-the-box sin pasos previos, que es el objetivo de este compose
+# (demo/portafolio). Si se necesitara producción real, estos deben moverse a un
+# `.env` (gitignored) o a un secret manager.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mini_erp
+      POSTGRES_PASSWORD: mini_erp
+      POSTGRES_DB: mini_erp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mini_erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://mini_erp:mini_erp@postgres:5432/mini_erp?schema=public"
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: dev-jwt-secret-change-me
+      COOKIE_SECRET: dev-cookie-secret-change-me
+      CORS_ORIGIN: "http://localhost:5173"
+      CLIENT_URL: "http://localhost:5173"
+    ports:
+      - "3000:3000"
+    healthcheck:
+      # node:20-alpine no trae `curl`; sí trae `wget` (busybox). `-q -O -` descarta
+      # el body y envía a stdout, `--spider` no sirve aquí porque no valida el
+      # status 200 de forma fiable en todas las versiones de busybox wget.
+      #
+      # Usamos 127.0.0.1 en vez de `localhost`: el resolver musl de Alpine
+      # devuelve `::1` (IPv6) antes que `127.0.0.1` para "localhost", pero el
+      # server Fastify solo escucha en IPv4 (`0.0.0.0:3000`, ver src/server.ts /
+      # HOST default). Con `localhost`, wget intenta `::1:3000` y falla con
+      # "Connection refused" aunque la app esté sana (verificado en runtime).
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
