@@ -75,8 +75,8 @@ jobs:
       # Se apunta directamente ambas a la DB de test para evitar divergencias.
       DATABASE_URL: postgresql://mini_erp:mini_erp@localhost:5432/mini_erp_test?schema=public
       DATABASE_URL_TEST: postgresql://mini_erp:mini_erp@localhost:5432/mini_erp_test?schema=public
-      JWT_SECRET: ci-jwt-secret-dummy
-      COOKIE_SECRET: ci-cookie-secret-dummy
+      JWT_SECRET: ci-jwt-secret-dummy-value-not-for-real-use
+      COOKIE_SECRET: ci-cookie-secret-dummy-value-not-for-real-use
 
     steps:
       - name: Checkout

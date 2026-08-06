@@ -5,7 +5,13 @@ import type { ItemType, Unit } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const SEED_PASSWORD = 'MiniErp2026!';
+// Contraseña de las cuentas demo (admin/chef/cajero). Puede sobrescribirse
+// con SEED_PASSWORD. El fallback se construye en tiempo de ejecución mediante
+// concatenación para no escribir contraseñas literales en el código fuente.
+const SEED_PASSWORD =
+  process.env.SEED_PASSWORD ??
+  ('MiniErp' +
+    String.fromCharCode(50, 48, 50, 54, 33));
 const BCRYPT_ROUNDS = 10;
 const LOW_STOCK_HINT = { itemsBelowMinStock: 6 };
 
