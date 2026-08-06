@@ -9,10 +9,14 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "overrides": {
+    "es-toolkit": "^1.50.0"
+  },
   "dependencies": {
     "axios": "^1.17.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
