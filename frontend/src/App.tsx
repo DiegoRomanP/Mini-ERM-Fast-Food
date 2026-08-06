@@ -8,8 +8,12 @@ import { ItemForm } from "./components/ItemForm";
 import { Toast } from "./components/Toast";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import type { ToastData } from "./components/Toast";
+import { useAuth } from "./hooks/useAuth";
+import { AuthGate } from "./components/auth/AuthGate";
+import { AuthHeader } from "./components/auth/AuthHeader";
 
 function App() {
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<IInventoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -75,9 +79,24 @@ function App() {
     }
   };
 
+  // Capa de sesión (Fase 7) por encima de la demo de inventario existente:
+  // no reemplaza su lógica, solo decide si mostrarla. Ver PLAN.md Fase 7.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <p className="text-gray-600">Cargando sesión...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthGate />;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gray-100">
+      <AuthHeader />
+      <div className="max-w-5xl mx-auto p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestión de Inventario</h1>
