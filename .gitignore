@@ -67,3 +67,9 @@ coverage/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# AI tooling / agent configuration (local only, not part of the portfolio deliverable)
+.claude/
+.agents/
+.opencode/
+skills-lock.json
