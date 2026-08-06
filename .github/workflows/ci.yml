@@ -1,0 +1,135 @@
+name: API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+# Todos los comandos `run:` de este workflow viven dentro de `api/` por defecto,
+# así no hace falta prefijar cada línea con `cd api &&`. Los steps que usan
+# acciones (no `run:`), como setup-node o docker/build-push-action, no se ven
+# afectados por esto y reciben rutas explícitas (`api/package-lock.json`,
+# `context: api`, etc.) porque sus inputs son relativos a la raíz del repo.
+defaults:
+  run:
+    working-directory: api
+
+jobs:
+  # Job rápido de calidad estática. Se mantiene independiente de `test` (sin
+  # `needs`) para que ambos corran en paralelo: en un repo de portafolio con
+  # una sola suite de tests, priorizamos feedback total más rápido sobre el
+  # ahorro de minutos de CI que daría un fail-fast secuencial.
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      # `postinstall` en api/package.json ya corre `prisma generate` como
+      # parte de este `npm ci` — no se duplica el step.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mini_erp
+          POSTGRES_PASSWORD: mini_erp
+          POSTGRES_DB: mini_erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # El service de Postgres es accesible en `localhost` desde la
+      # perspectiva del runner (a diferencia de docker-compose, donde el
+      # hostname sería el nombre del servicio, `postgres`).
+      #
+      # `tests/setup.ts` sobreescribe `process.env.DATABASE_URL` con
+      # `DATABASE_URL_TEST` en runtime de los tests, pero `src/config/env.ts`
+      # valida `DATABASE_URL` como requerida al importarse (p.ej. también la
+      # necesita `prisma migrate deploy`, que no pasa por `tests/setup.ts`).
+      # Se apunta directamente ambas a la DB de test para evitar divergencias.
+      DATABASE_URL: postgresql://mini_erp:mini_erp@localhost:5432/mini_erp_test?schema=public
+      DATABASE_URL_TEST: postgresql://mini_erp:mini_erp@localhost:5432/mini_erp_test?schema=public
+      JWT_SECRET: ci-jwt-secret-dummy
+      COOKIE_SECRET: ci-cookie-secret-dummy
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply Prisma migrations
+        run: npx prisma migrate deploy
+
+      # vitest.config.ts no requiere flags de CI extra (no hay modo "watch"
+      # implícito); `npm test` ya invoca `vitest run`, que es no interactivo.
+      - name: Run tests
+        run: npm test
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: api/coverage
+          retention-days: 7
+
+  # Job opcional: solo valida que la imagen construye sin errores en CI
+  # (push: false). Corre después de que lint/typecheck y tests pasen, para no
+  # gastar tiempo de build si la calidad del código ya falló.
+  docker-build:
+    name: Docker build (validation)
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: api
+          push: false
+          tags: mini-erp-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
