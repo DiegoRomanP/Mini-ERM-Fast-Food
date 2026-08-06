@@ -5,6 +5,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { jsonSchemaTransform } from 'fastify-type-provider-zod';
 import { REFRESH_COOKIE_NAME } from './auth.js';
+import { env } from '../config/env.js';
 
 export const DOCS_ROUTE_PREFIX = '/docs';
 
@@ -35,8 +36,19 @@ function readPackageVersion(): string {
  * rutas que se registran *después* de que este plugin termina de
  * inicializarse.
  */
+function isSwaggerEnabled(): boolean {
+  if (env.NODE_ENV === 'production') {
+    return env.ENABLE_SWAGGER;
+  }
+  return true;
+}
+
 export default fp(
   async function swaggerPlugin(app) {
+    if (!isSwaggerEnabled()) {
+      return;
+    }
+
     await app.register(swagger, {
       openapi: {
         info: {
@@ -47,7 +59,7 @@ export default fp(
             'proveedores e inventario. `POST /api/v1/auth/register` y ' +
             '`POST /api/v1/auth/login` devuelven el access token (JWT) en el body ' +
             'de la respuesta y, además, setean automáticamente una cookie httpOnly ' +
-            `(\`${REFRESH_COOKIE_NAME}\`) con el refresh token — esa cookie nunca se ` +
+            `'${REFRESH_COOKIE_NAME}' con el refresh token — esa cookie nunca se ` +
             'expone en el body y el cliente no debe manipularla manualmente, solo ' +
             'reenviarla (p. ej. `credentials: "include"`) al llamar ' +
             '`POST /api/v1/auth/refresh`.',
